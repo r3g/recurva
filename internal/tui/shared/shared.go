@@ -59,10 +59,10 @@ var (
 	ColorPrimary   = lipgloss.Color("#7C3AED")
 	ColorSecondary = lipgloss.Color("#A78BFA")
 	ColorMuted     = lipgloss.Color("#6B7280")
-	ColorAgain     = lipgloss.Color("#EF4444")
-	ColorHard      = lipgloss.Color("#F59E0B")
-	ColorGood      = lipgloss.Color("#10B981")
-	ColorEasy      = lipgloss.Color("#3B82F6")
+	ColorAgain     = lipgloss.Color("#FF2D95")
+	ColorHard      = lipgloss.Color("#FF6B1A")
+	ColorGood      = lipgloss.Color("#39FF14")
+	ColorEasy      = lipgloss.Color("#00D4FF")
 
 	StyleTitle = lipgloss.NewStyle().
 			Bold(true).
