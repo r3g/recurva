@@ -41,6 +41,7 @@ type Model struct {
 	state      ReviewState
 	preview    *scheduler.Preview
 	priorStats ratingCounts
+	width      int
 	err        error
 }
 
@@ -72,6 +73,9 @@ func (m Model) loadSession() tea.Cmd {
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		m.width = msg.Width
+		return m, nil
 	case sessionLoadedMsg:
 		if msg.err != nil {
 			m.err = msg.err
@@ -186,6 +190,18 @@ func (m Model) View() string {
 		s := shared.StyleProgress.Render(fmt.Sprintf("[%d/%d]", cur, total))
 		s += "  " + shared.StyleSubtle.Render("Deck: "+m.deckName) + "\n"
 
+		// Constrain card width to terminal (border=2 + padding=4 + margin for centering)
+		cardWidth := 60
+		if m.width > 0 {
+			cardWidth = m.width - 4
+			if cardWidth > 80 {
+				cardWidth = 80
+			}
+		}
+		innerWidth := cardWidth - 6 // border (2) + padding (2*2)
+
+		cardStyle := shared.StyleCard.Width(innerWidth)
+
 		cardContent := shared.StyleFront.Render(card.Front)
 		if m.state == ReviewStateBack {
 			cardContent += "\n\n" + shared.StyleSubtle.Render("─────────────────") + "\n\n"
@@ -194,7 +210,7 @@ func (m Model) View() string {
 				cardContent += "\n\n" + shared.StyleSubtle.Render("Notes: "+card.Notes)
 			}
 		}
-		s += shared.StyleCard.Render(cardContent) + "\n"
+		s += cardStyle.Render(cardContent) + "\n"
 
 		if m.state == ReviewStateFront {
 			s += shared.StyleHelp.Render("space to flip • esc back • q quit")
