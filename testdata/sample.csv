@@ -1,0 +1,6 @@
+front,back,notes
+What is a goroutine?,A lightweight thread managed by the Go runtime,Part of Go's concurrency model
+What does 'defer' do in Go?,Schedules a function call to run when the surrounding function returns,Useful for cleanup
+What is an interface in Go?,A type that defines a set of method signatures,Enables polymorphism
+What is a channel in Go?,A typed conduit for communicating between goroutines,Use make(chan T) to create
+What does 'select' do in Go?,Waits on multiple channel operations,Like a switch for channels

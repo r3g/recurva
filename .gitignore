@@ -1,0 +1,25 @@
+# Binaries
+recurva
+recurva-linux
+*.exe
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local data
+*.db
+*.db-wal
+*.db-shm
+
+# Imported scratch data
+imported/
+
+# Test
+coverage.out

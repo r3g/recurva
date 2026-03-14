@@ -1,0 +1,34 @@
+linters:
+  enable:
+    - errcheck
+    - govet
+    - staticcheck
+    - unused
+    - gosimple
+    - ineffassign
+    - typecheck
+    - gofumpt
+    - goconst
+    - misspell
+    - gosec
+    - errname
+    - errorlint
+    - exhaustive
+    - copyloopvar
+
+linters-settings:
+  gofumpt:
+    extra-rules: true
+  goconst:
+    min-len: 3
+    min-occurrences: 3
+  gosec:
+    excludes:
+      - G115 # integer overflow conversion — too noisy for uint32/uint64 casts in SRS data
+  exhaustive:
+    default-signifies-exhaustive: true
+
+issues:
+  exclude-dirs:
+    - imported
+    - testdata
