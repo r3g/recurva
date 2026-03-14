@@ -188,6 +188,8 @@ func (m Model) View() string {
 		} else {
 			s += renderRatingBar(m.preview)
 		}
+
+		s += "\n\n" + m.renderSessionStats()
 		return s
 
 	case ReviewStateDone:
@@ -219,6 +221,40 @@ func renderRatingBar(preview *scheduler.Preview) string {
 			shared.StyleEasy.Render("[4] Easy")
 	}
 	return "\n" + s + "\n" + shared.StyleHelp.Render("esc unflip • q quit")
+}
+
+func (m Model) renderSessionStats() string {
+	if m.session == nil {
+		return ""
+	}
+	remaining := len(m.session.Queue) - m.session.Current
+	reviewed := len(m.session.Logs)
+
+	var again, hard, good, easy int
+	for _, l := range m.session.Logs {
+		switch l.Rating {
+		case domain.RatingAgain:
+			again++
+		case domain.RatingHard:
+			hard++
+		case domain.RatingGood:
+			good++
+		case domain.RatingEasy:
+			easy++
+		}
+	}
+
+	stats := shared.StyleSubtle.Render(fmt.Sprintf("Remaining: %d", remaining))
+	if reviewed > 0 {
+		stats += shared.StyleSubtle.Render("  |  ")
+		stats += shared.StyleAgain.Render(fmt.Sprintf("A:%d", again)) + " "
+		stats += shared.StyleHard.Render(fmt.Sprintf("H:%d", hard)) + " "
+		stats += shared.StyleGood.Render(fmt.Sprintf("G:%d", good)) + " "
+		stats += shared.StyleEasy.Render(fmt.Sprintf("E:%d", easy))
+		pct := float64(good+easy) / float64(reviewed) * 100
+		stats += shared.StyleSubtle.Render(fmt.Sprintf("  |  %.0f%% pass", pct))
+	}
+	return stats
 }
 
 func formatInterval(days uint64) string {
