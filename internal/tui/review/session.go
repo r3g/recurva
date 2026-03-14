@@ -12,8 +12,13 @@ import (
 )
 
 type sessionLoadedMsg struct {
-	session *domain.ReviewSession
-	err     error
+	session    *domain.ReviewSession
+	priorStats ratingCounts
+	err        error
+}
+
+type ratingCounts struct {
+	again, hard, good, easy int
 }
 
 type ratedMsg struct {
@@ -30,12 +35,13 @@ const (
 )
 
 type Model struct {
-	reviewSvc *service.ReviewService
-	deckName  string
-	session   *domain.ReviewSession
-	state     ReviewState
-	preview   *scheduler.Preview
-	err       error
+	reviewSvc  *service.ReviewService
+	deckName   string
+	session    *domain.ReviewSession
+	state      ReviewState
+	preview    *scheduler.Preview
+	priorStats ratingCounts
+	err        error
 }
 
 func New(svc *service.ReviewService, deckName string) (Model, tea.Cmd) {
@@ -53,8 +59,14 @@ func (m Model) Init() tea.Cmd {
 
 func (m Model) loadSession() tea.Cmd {
 	return func() tea.Msg {
-		session, err := m.reviewSvc.StartSession(context.Background(), m.deckName)
-		return sessionLoadedMsg{session: session, err: err}
+		ctx := context.Background()
+		session, err := m.reviewSvc.StartSession(ctx, m.deckName)
+		if err != nil {
+			return sessionLoadedMsg{err: err}
+		}
+		a, h, g, e := m.reviewSvc.PriorRatingCounts(ctx, m.deckName, 30)
+		prior := ratingCounts{again: a, hard: h, good: g, easy: e}
+		return sessionLoadedMsg{session: session, priorStats: prior}
 	}
 }
 
@@ -66,6 +78,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		m.session = msg.session
+		m.priorStats = msg.priorStats
 		if m.session.Done() {
 			m.state = ReviewStateDone
 			return m, switchToResult()
@@ -228,31 +241,39 @@ func (m Model) renderSessionStats() string {
 		return ""
 	}
 	remaining := len(m.session.Queue) - m.session.Current
-	reviewed := len(m.session.Logs)
 
-	var again, hard, good, easy int
+	// Current session counts
+	var sa, sh, sg, se int
 	for _, l := range m.session.Logs {
 		switch l.Rating {
 		case domain.RatingAgain:
-			again++
+			sa++
 		case domain.RatingHard:
-			hard++
+			sh++
 		case domain.RatingGood:
-			good++
+			sg++
 		case domain.RatingEasy:
-			easy++
+			se++
 		}
 	}
 
+	// Combined: prior sessions + current session
+	ta := m.priorStats.again + sa
+	th := m.priorStats.hard + sh
+	tg := m.priorStats.good + sg
+	te := m.priorStats.easy + se
+	total := ta + th + tg + te
+
 	stats := shared.StyleSubtle.Render(fmt.Sprintf("Remaining: %d", remaining))
-	if reviewed > 0 {
+	if total > 0 {
 		stats += shared.StyleSubtle.Render("  |  ")
-		stats += shared.StyleAgain.Render(fmt.Sprintf("A:%d", again)) + " "
-		stats += shared.StyleHard.Render(fmt.Sprintf("H:%d", hard)) + " "
-		stats += shared.StyleGood.Render(fmt.Sprintf("G:%d", good)) + " "
-		stats += shared.StyleEasy.Render(fmt.Sprintf("E:%d", easy))
-		pct := float64(good+easy) / float64(reviewed) * 100
+		stats += shared.StyleAgain.Render(fmt.Sprintf("A:%d", ta)) + " "
+		stats += shared.StyleHard.Render(fmt.Sprintf("H:%d", th)) + " "
+		stats += shared.StyleGood.Render(fmt.Sprintf("G:%d", tg)) + " "
+		stats += shared.StyleEasy.Render(fmt.Sprintf("E:%d", te))
+		pct := float64(tg+te) / float64(total) * 100
 		stats += shared.StyleSubtle.Render(fmt.Sprintf("  |  %.0f%% pass", pct))
+		stats += shared.StyleSubtle.Render("  (30d)")
 	}
 	return stats
 }

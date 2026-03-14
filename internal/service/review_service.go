@@ -90,6 +90,32 @@ func (s *ReviewService) Summary(session *domain.ReviewSession) domain.SessionSum
 	return summary
 }
 
+// PriorRatingCounts returns aggregate rating counts for a deck over the last N days.
+func (s *ReviewService) PriorRatingCounts(ctx context.Context, deckName string, days int) (again, hard, good, easy int) {
+	deck, err := s.store.Decks.GetDeckByName(ctx, deckName)
+	if err != nil {
+		return 0, 0, 0, 0
+	}
+	since := time.Now().UTC().AddDate(0, 0, -days)
+	logs, err := s.store.Reviews.ListReviewLogs(ctx, deck.ID, since)
+	if err != nil {
+		return 0, 0, 0, 0
+	}
+	for _, l := range logs {
+		switch l.Rating {
+		case domain.RatingAgain:
+			again++
+		case domain.RatingHard:
+			hard++
+		case domain.RatingGood:
+			good++
+		case domain.RatingEasy:
+			easy++
+		}
+	}
+	return again, hard, good, easy
+}
+
 func (s *ReviewService) ReviewStats(ctx context.Context, deckID string, days int) ([]*domain.ReviewLog, error) {
 	since := time.Now().UTC().AddDate(0, 0, -days)
 	return s.store.Reviews.ListReviewLogs(ctx, deckID, since)
