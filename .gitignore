@@ -1,6 +1,6 @@
 # Binaries
-recurva
-recurva-linux
+/recurva
+/recurva-linux
 *.exe
 
 # IDE
