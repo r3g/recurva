@@ -192,23 +192,26 @@ func (m Model) View() string {
 		s := shared.StyleProgress.Render(fmt.Sprintf("[%d/%d]", cur, total))
 		s += "  " + shared.StyleSubtle.Render("Deck: "+m.deckName) + "\n"
 
-		// Constrain card width to terminal (border=2 + padding=4 + margin for centering)
-		cardWidth := 60
+		// Constrain card width to terminal
+		// lipgloss.Width = content + padding (excludes border)
+		// StyleCard has Padding(1,2) = 4 horizontal + Border = 2
+		widgetWidth := 60
 		if m.width > 0 {
-			cardWidth = m.width - 4
-			if cardWidth > 80 {
-				cardWidth = 80
+			widgetWidth = m.width - 4
+			if widgetWidth > 80 {
+				widgetWidth = 80
 			}
 		}
-		innerWidth := cardWidth - 6 // border (2) + padding (2*2)
+		innerWidth := widgetWidth - 2  // subtract border (2) — this is what .Width() gets
+		contentWidth := innerWidth - 4 // subtract horizontal padding (2+2)
 
 		cardStyle := shared.StyleCard.Width(innerWidth)
 
-		centeredFront := lipgloss.NewStyle().Width(innerWidth).Align(lipgloss.Center).
+		centeredFront := lipgloss.NewStyle().Width(contentWidth).Align(lipgloss.Center).
 			Bold(true).Foreground(shared.ColorFront).Render(card.Front)
 		cardContent := centeredFront
 		if m.state == ReviewStateBack {
-			divider := strings.Repeat("─", innerWidth)
+			divider := strings.Repeat("─", contentWidth)
 			cardContent += "\n\n" + shared.StyleSubtle.Render(divider) + "\n\n"
 			cardContent += shared.StyleBack.Render(card.Back)
 			if card.Notes != "" {
