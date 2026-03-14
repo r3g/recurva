@@ -1,7 +1,8 @@
 version: 2
 
 builds:
-  - main: ./cmd/recurva
+  - dir: .
+    main: ./cmd/recurva
     binary: recurva
     env:
       - CGO_ENABLED=0

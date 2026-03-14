@@ -20,10 +20,10 @@ jobs:
         with:
           go-version-file: go.mod
 
+      - name: Install GoReleaser
+        run: go install github.com/goreleaser/goreleaser/v2@latest
+
       - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v6
-        with:
-          version: "~> v2"
-          args: release --clean
+        run: goreleaser release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
