@@ -40,7 +40,7 @@ func (s *DeckService) GetDeckByName(ctx context.Context, name string) (*domain.D
 }
 
 func (s *DeckService) DeckStats(ctx context.Context, deckID string) (*domain.DeckStats, error) {
-	return s.store.Decks.DeckStats(ctx, deckID, time.Now())
+	return s.store.Decks.DeckStats(ctx, deckID, time.Now().UTC())
 }
 
 func (s *DeckService) AllDeckStats(ctx context.Context) ([]*domain.DeckStats, error) {
@@ -48,7 +48,7 @@ func (s *DeckService) AllDeckStats(ctx context.Context) ([]*domain.DeckStats, er
 	if err != nil {
 		return nil, err
 	}
-	now := time.Now()
+	now := time.Now().UTC()
 	var result []*domain.DeckStats
 	for _, d := range decks {
 		stats, err := s.store.Decks.DeckStats(ctx, d.ID, now)

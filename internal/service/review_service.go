@@ -9,7 +9,7 @@ import (
 	"github.com/r3g/recurva/internal/store"
 )
 
-func timeNow() time.Time { return time.Now() }
+func timeNow() time.Time { return time.Now().UTC() }
 
 type ReviewService struct {
 	store     store.Store
@@ -25,7 +25,7 @@ func (s *ReviewService) StartSession(ctx context.Context, deckName string) (*dom
 	if err != nil {
 		return nil, err
 	}
-	now := time.Now()
+	now := time.Now().UTC()
 	cards, err := s.store.Cards.ListCards(ctx, deck.ID, true, now)
 	if err != nil {
 		return nil, err
@@ -42,7 +42,7 @@ func (s *ReviewService) Rate(ctx context.Context, session *domain.ReviewSession,
 		return domain.ErrInvalidInput
 	}
 
-	result, err := s.scheduler.Schedule(*card, rating, time.Now())
+	result, err := s.scheduler.Schedule(*card, rating, time.Now().UTC())
 	if err != nil {
 		return err
 	}
@@ -63,7 +63,7 @@ func (s *ReviewService) Rate(ctx context.Context, session *domain.ReviewSession,
 }
 
 func (s *ReviewService) Preview(card domain.Card) (scheduler.Preview, error) {
-	return s.scheduler.Preview(card, time.Now())
+	return s.scheduler.Preview(card, time.Now().UTC())
 }
 
 func (s *ReviewService) Summary(session *domain.ReviewSession) domain.SessionSummary {
@@ -87,6 +87,6 @@ func (s *ReviewService) Summary(session *domain.ReviewSession) domain.SessionSum
 }
 
 func (s *ReviewService) ReviewStats(ctx context.Context, deckID string, days int) ([]*domain.ReviewLog, error) {
-	since := time.Now().AddDate(0, 0, -days)
+	since := time.Now().UTC().AddDate(0, 0, -days)
 	return s.store.Reviews.ListReviewLogs(ctx, deckID, since)
 }
