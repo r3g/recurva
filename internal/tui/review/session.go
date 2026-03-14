@@ -3,8 +3,10 @@ package review
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/r3g/recurva/internal/domain"
 	"github.com/r3g/recurva/internal/scheduler"
 	"github.com/r3g/recurva/internal/service"
@@ -202,9 +204,12 @@ func (m Model) View() string {
 
 		cardStyle := shared.StyleCard.Width(innerWidth)
 
-		cardContent := shared.StyleFront.Render(card.Front)
+		centeredFront := lipgloss.NewStyle().Width(innerWidth).Align(lipgloss.Center).
+			Bold(true).Foreground(shared.ColorFront).Render(card.Front)
+		cardContent := centeredFront
 		if m.state == ReviewStateBack {
-			cardContent += "\n\n" + shared.StyleSubtle.Render("─────────────────") + "\n\n"
+			divider := strings.Repeat("─", innerWidth)
+			cardContent += "\n\n" + shared.StyleSubtle.Render(divider) + "\n\n"
 			cardContent += shared.StyleBack.Render(card.Back)
 			if card.Notes != "" {
 				cardContent += "\n\n" + shared.StyleSubtle.Render("Notes: "+card.Notes)

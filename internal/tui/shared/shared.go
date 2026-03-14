@@ -79,12 +79,15 @@ var (
 			MarginTop(1).
 			MarginBottom(1)
 
+	ColorFront = lipgloss.Color("#F9FAFB")
+	ColorBack  = lipgloss.Color("#D1FAE5")
+
 	StyleFront = lipgloss.NewStyle().
 			Bold(true).
-			Foreground(lipgloss.Color("#F9FAFB"))
+			Foreground(ColorFront)
 
 	StyleBack = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#D1FAE5"))
+			Foreground(ColorBack)
 
 	StyleProgress = lipgloss.NewStyle().
 			Foreground(ColorSecondary)
