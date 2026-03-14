@@ -63,8 +63,22 @@ func (s *ReviewService) Rate(ctx context.Context, session *domain.ReviewSession,
 	session.Queue[session.Current] = &result.Card
 	session.Logs = append(session.Logs, log)
 	session.Current++
+
+	// Re-queue "Again" cards ~10 cards later for within-session repetition
+	if rating == domain.RatingAgain {
+		reinsertAt := session.Current + againRequeueGap
+		if reinsertAt > len(session.Queue) {
+			reinsertAt = len(session.Queue)
+		}
+		updated := result.Card
+		session.Queue = append(session.Queue[:reinsertAt],
+			append([]*domain.Card{&updated}, session.Queue[reinsertAt:]...)...)
+	}
+
 	return nil
 }
+
+const againRequeueGap = 10
 
 func (s *ReviewService) Preview(card domain.Card) (scheduler.Preview, error) {
 	return s.scheduler.Preview(card, time.Now().UTC())
