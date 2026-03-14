@@ -10,7 +10,6 @@ import (
 	"text/tabwriter"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/spf13/cobra"
 	"github.com/r3g/recurva/internal/config"
 	"github.com/r3g/recurva/internal/scheduler/fsrs"
 	"github.com/r3g/recurva/internal/service"
@@ -18,6 +17,7 @@ import (
 	sqlitestore "github.com/r3g/recurva/internal/store/sqlite"
 	"github.com/r3g/recurva/internal/tui"
 	"github.com/r3g/recurva/internal/tui/review"
+	"github.com/spf13/cobra"
 )
 
 func main() {
@@ -89,14 +89,14 @@ func reviewCmd() *cobra.Command {
 			if len(args) == 1 {
 				// Direct deck review
 				m, _ := review.New(svc.Reviews, args[0])
-				p := tea.NewProgram(m)
+				p := tea.NewProgram(m, tea.WithAltScreen())
 				_, err := p.Run()
 				return err
 			}
 
 			// Launch TUI app
 			app := tui.NewApp(svc)
-			p := tea.NewProgram(app)
+			p := tea.NewProgram(app, tea.WithAltScreen())
 			_, err = p.Run()
 			return err
 		},

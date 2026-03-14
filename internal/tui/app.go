@@ -2,6 +2,7 @@ package tui
 
 import (
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/r3g/recurva/internal/service"
 	"github.com/r3g/recurva/internal/tui/decks"
 	"github.com/r3g/recurva/internal/tui/menu"
@@ -31,6 +32,8 @@ type Services struct {
 type App struct {
 	services Services
 	screen   Screen
+	width    int
+	height   int
 	menu     menu.Model
 	decks    decks.Model
 	review   review.Model
@@ -52,6 +55,9 @@ func (a *App) Init() tea.Cmd {
 
 func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		a.width = msg.Width
+		a.height = msg.Height
 	case tea.KeyMsg:
 		if msg.String() == "ctrl+c" {
 			return a, tea.Quit
@@ -103,15 +109,19 @@ func (a *App) handleSwitch(msg shared.SwitchScreenMsg) (tea.Model, tea.Cmd) {
 }
 
 func (a *App) View() string {
+	var content string
 	switch a.screen {
 	case ScreenMenu:
-		return a.menu.View()
+		content = a.menu.View()
 	case ScreenDecks:
-		return a.decks.View()
+		content = a.decks.View()
 	case ScreenReview:
-		return a.review.View()
+		content = a.review.View()
 	case ScreenResult:
-		return a.result.View()
+		content = a.result.View()
 	}
-	return ""
+	if a.width == 0 || a.height == 0 {
+		return content
+	}
+	return lipgloss.Place(a.width, a.height, lipgloss.Center, lipgloss.Center, content)
 }
