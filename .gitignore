@@ -21,5 +21,8 @@ Thumbs.db
 # Imported scratch data
 imported/
 
+# GoReleaser
+dist/
+
 # Test
 coverage.out
