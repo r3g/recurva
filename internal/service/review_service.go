@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"math/rand/v2"
 	"time"
 
 	"github.com/r3g/recurva/internal/domain"
@@ -30,6 +31,9 @@ func (s *ReviewService) StartSession(ctx context.Context, deckName string) (*dom
 	if err != nil {
 		return nil, err
 	}
+	rand.Shuffle(len(cards), func(i, j int) {
+		cards[i], cards[j] = cards[j], cards[i]
+	})
 	return &domain.ReviewSession{
 		Queue:   cards,
 		StartAt: now,
