@@ -15,17 +15,20 @@ type Store struct {
 	decks   map[string]*domain.Deck
 	cards   map[string]*domain.Card
 	reviews []*domain.ReviewLog
+	tags    map[string]*domain.Tag
 }
 
 func New() *store.Store {
 	s := &Store{
 		decks: make(map[string]*domain.Deck),
 		cards: make(map[string]*domain.Card),
+		tags:  make(map[string]*domain.Tag),
 	}
 	return &store.Store{
 		Cards:   s,
 		Decks:   s,
 		Reviews: s,
+		Tags:    s,
 	}
 }
 
@@ -218,4 +221,75 @@ func (s *Store) ListReviewLogs(ctx context.Context, deckID string, since time.Ti
 		}
 	}
 	return logs, nil
+}
+
+// TagStore methods
+
+func (s *Store) ListTags(ctx context.Context) ([]*domain.Tag, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	var tags []*domain.Tag
+	for _, t := range s.tags {
+		cp := *t
+		tags = append(tags, &cp)
+	}
+	return tags, nil
+}
+
+func (s *Store) GetTagByName(ctx context.Context, name string) (*domain.Tag, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	for _, t := range s.tags {
+		if t.Name == name {
+			cp := *t
+			return &cp, nil
+		}
+	}
+	return nil, domain.ErrNotFound
+}
+
+func (s *Store) CreateTag(ctx context.Context, tag *domain.Tag) (*domain.Tag, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for _, t := range s.tags {
+		if t.Name == tag.Name {
+			return nil, domain.ErrAlreadyExists
+		}
+	}
+	if tag.ID == "" {
+		tag.ID = uuid.NewString()
+	}
+	now := time.Now().UTC()
+	tag.CreatedAt = now
+	tag.UpdatedAt = now
+	cp := *tag
+	s.tags[tag.ID] = &cp
+	return tag, nil
+}
+
+func (s *Store) RenameTag(ctx context.Context, id, newName string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	t, ok := s.tags[id]
+	if !ok {
+		return domain.ErrNotFound
+	}
+	for _, existing := range s.tags {
+		if existing.Name == newName {
+			return domain.ErrAlreadyExists
+		}
+	}
+	t.Name = newName
+	t.UpdatedAt = time.Now().UTC()
+	return nil
+}
+
+func (s *Store) DeleteTag(ctx context.Context, id string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if _, ok := s.tags[id]; !ok {
+		return domain.ErrNotFound
+	}
+	delete(s.tags, id)
+	return nil
 }

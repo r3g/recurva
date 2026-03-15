@@ -50,3 +50,10 @@ type DeckStats struct {
 	DueCards   int
 	NewCards   int
 }
+
+type Tag struct {
+	ID        string
+	Name      string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}

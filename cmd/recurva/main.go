@@ -36,6 +36,7 @@ func rootCmd() *cobra.Command {
 		addCmd(),
 		decksCmd(),
 		cardsCmd(),
+		tagsCmd(),
 		statsCmd(),
 		importCmd(),
 	)
@@ -61,6 +62,7 @@ func loadServices() (tui.Services, func(), error) {
 		Cards:   sqlitestore.NewCardStore(db),
 		Decks:   sqlitestore.NewDeckStore(db),
 		Reviews: sqlitestore.NewReviewStore(db),
+		Tags:    sqlitestore.NewTagStore(db),
 	}
 
 	sched := fsrs.New(cfg.ToFSRSParams())
@@ -69,6 +71,7 @@ func loadServices() (tui.Services, func(), error) {
 		Decks:   service.NewDeckService(s),
 		Cards:   service.NewCardService(s),
 		Reviews: service.NewReviewService(s, sched),
+		Tags:    service.NewTagService(s),
 	}
 
 	return svc, func() { db.Close() }, nil
@@ -261,6 +264,100 @@ func cardsCmd() *cobra.Command {
 	}
 
 	cmd.AddCommand(listCmd, deleteCmd)
+	return cmd
+}
+
+func tagsCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "tags",
+		Short: "Manage tags",
+	}
+
+	listCmd := &cobra.Command{
+		Use:   "list",
+		Short: "List all tags",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			svc, cleanup, err := loadServices()
+			if err != nil {
+				return err
+			}
+			defer cleanup()
+
+			tags, err := svc.Tags.ListTags(context.Background())
+			if err != nil {
+				return err
+			}
+
+			if len(tags) == 0 {
+				fmt.Println("No tags defined.")
+				return nil
+			}
+			for _, t := range tags {
+				fmt.Println(t.Name)
+			}
+			return nil
+		},
+	}
+
+	addCmd := &cobra.Command{
+		Use:   "add <name>",
+		Short: "Add a new tag",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			svc, cleanup, err := loadServices()
+			if err != nil {
+				return err
+			}
+			defer cleanup()
+
+			tag, err := svc.Tags.AddTag(context.Background(), args[0])
+			if err != nil {
+				return err
+			}
+			fmt.Printf("Tag added: %s\n", tag.Name)
+			return nil
+		},
+	}
+
+	renameCmd := &cobra.Command{
+		Use:   "rename <old> <new>",
+		Short: "Rename a tag",
+		Args:  cobra.ExactArgs(2),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			svc, cleanup, err := loadServices()
+			if err != nil {
+				return err
+			}
+			defer cleanup()
+
+			if err := svc.Tags.RenameTag(context.Background(), args[0], args[1]); err != nil {
+				return err
+			}
+			fmt.Printf("Tag renamed: %s → %s\n", args[0], args[1])
+			return nil
+		},
+	}
+
+	deleteCmd := &cobra.Command{
+		Use:   "delete <name>",
+		Short: "Delete a tag",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			svc, cleanup, err := loadServices()
+			if err != nil {
+				return err
+			}
+			defer cleanup()
+
+			if err := svc.Tags.DeleteTag(context.Background(), args[0]); err != nil {
+				return err
+			}
+			fmt.Printf("Tag deleted: %s\n", args[0])
+			return nil
+		},
+	}
+
+	cmd.AddCommand(listCmd, addCmd, renameCmd, deleteCmd)
 	return cmd
 }
 

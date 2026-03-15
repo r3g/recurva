@@ -143,9 +143,9 @@ func TestCardService_ImportVocab(t *testing.T) {
 	}
 
 	input := strings.Join([]string{
-		"abase:v:to cause to feel shame; hurt the pride of; (a):s:15967268:1418544771",
-		"abash:v:to destroy the self-possession or self-confidence of; embarrass::10674608:1418544771",
-		"abbey:n:the group of buildings which collectively form the dwelling-place of a society of monks or nuns; nunnery; priory::10669658:1418544771",
+		"abase:v:to cause to feel shame; hurt the pride of; (a):gmat|gre|sat",
+		"abash:v:to destroy the self-possession or self-confidence of; embarrass:",
+		"abbey:n:the group of buildings which collectively form the dwelling-place of a society of monks or nuns; nunnery; priory:",
 	}, "\n")
 
 	n, err := cardSvc.ImportVocab(ctx(), "Vocab", strings.NewReader(input))
@@ -169,8 +169,15 @@ func TestCardService_ImportVocab(t *testing.T) {
 			if !strings.Contains(c.Back, "to cause to feel shame") {
 				t.Errorf("abase back = %q, expected definition", c.Back)
 			}
-			if len(c.Tags) != 1 || c.Tags[0] != "v" {
-				t.Errorf("abase tags = %v, want [v]", c.Tags)
+			wantTags := []string{"v", "gmat", "gre", "sat"}
+			if len(c.Tags) != len(wantTags) {
+				t.Errorf("abase tags = %v, want %v", c.Tags, wantTags)
+			} else {
+				for i, tag := range wantTags {
+					if c.Tags[i] != tag {
+						t.Errorf("abase tags[%d] = %q, want %q", i, c.Tags[i], tag)
+					}
+				}
 			}
 		}
 	}
@@ -187,7 +194,7 @@ func TestCardService_ImportVocab_SkipsMalformed(t *testing.T) {
 		t.Fatalf("setup: %v", err)
 	}
 
-	input := "good:v:definition:s:123:456\nbadline\n\n"
+	input := "good:v:definition:gre\nbadline\n\n"
 	n, err := cardSvc.ImportVocab(ctx(), "Vocab", strings.NewReader(input))
 	if err != nil {
 		t.Fatalf("ImportVocab: %v", err)
@@ -200,7 +207,7 @@ func TestCardService_ImportVocab_SkipsMalformed(t *testing.T) {
 func TestCardService_ImportVocab_DeckNotFound(t *testing.T) {
 	cardSvc := NewCardService(*memory.New())
 
-	_, err := cardSvc.ImportVocab(ctx(), "Nonexistent", strings.NewReader("a:v:b:s:1:2\n"))
+	_, err := cardSvc.ImportVocab(ctx(), "Nonexistent", strings.NewReader("a:v:b:gre\n"))
 	if err == nil {
 		t.Fatal("expected error for nonexistent deck")
 	}
@@ -212,25 +219,36 @@ func TestParseVocabLine(t *testing.T) {
 		line      string
 		wantFront string
 		wantBack  string
+		wantTags  []string
 		wantErr   bool
 	}{
 		{
-			name:      "standard",
-			line:      "abase:v:to cause to feel shame:s:123:456",
+			name:      "standard with flags",
+			line:      "abase:v:to cause to feel shame:gmat|gre|sat",
 			wantFront: "abase (v)",
 			wantBack:  "to cause to feel shame",
+			wantTags:  []string{"v", "gmat", "gre", "sat"},
 		},
 		{
 			name:      "empty flag",
-			line:      "abbey:n:a dwelling place::123:456",
+			line:      "abbey:n:a dwelling place:",
 			wantFront: "abbey (n)",
 			wantBack:  "a dwelling place",
+			wantTags:  []string{"n"},
+		},
+		{
+			name:      "single flag",
+			line:      "abet:v:to encourage:gre",
+			wantFront: "abet (v)",
+			wantBack:  "to encourage",
+			wantTags:  []string{"v", "gre"},
 		},
 		{
 			name:      "definition with colon",
-			line:      "word:adj:means this: or that:s:123:456",
+			line:      "word:adj:means this: or that:sat",
 			wantFront: "word (adj)",
 			wantBack:  "means this: or that",
+			wantTags:  []string{"adj", "sat"},
 		},
 		{
 			name:    "too few fields",
@@ -239,7 +257,7 @@ func TestParseVocabLine(t *testing.T) {
 		},
 		{
 			name:    "empty word",
-			line:    ":v:definition:s:123:456",
+			line:    ":v:definition:gre",
 			wantErr: true,
 		},
 	}
@@ -261,6 +279,17 @@ func TestParseVocabLine(t *testing.T) {
 			}
 			if card.Back != tt.wantBack {
 				t.Errorf("Back = %q, want %q", card.Back, tt.wantBack)
+			}
+			if tt.wantTags != nil {
+				if len(card.Tags) != len(tt.wantTags) {
+					t.Errorf("Tags = %v, want %v", card.Tags, tt.wantTags)
+				} else {
+					for i, tag := range tt.wantTags {
+						if card.Tags[i] != tag {
+							t.Errorf("Tags[%d] = %q, want %q", i, card.Tags[i], tag)
+						}
+					}
+				}
 			}
 			if card.DeckID != "deck-1" {
 				t.Errorf("DeckID = %q, want %q", card.DeckID, "deck-1")

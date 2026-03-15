@@ -21,6 +21,9 @@ Thumbs.db
 # Imported scratch data
 imported/
 
+# Non-prod tools/scripts
+tools/
+
 # GoReleaser
 dist/
 

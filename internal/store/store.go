@@ -30,8 +30,17 @@ type ReviewStore interface {
 	ListReviewLogs(ctx context.Context, deckID string, since time.Time) ([]*domain.ReviewLog, error)
 }
 
+type TagStore interface {
+	ListTags(ctx context.Context) ([]*domain.Tag, error)
+	GetTagByName(ctx context.Context, name string) (*domain.Tag, error)
+	CreateTag(ctx context.Context, tag *domain.Tag) (*domain.Tag, error)
+	RenameTag(ctx context.Context, id, newName string) error
+	DeleteTag(ctx context.Context, id string) error
+}
+
 type Store struct {
 	Cards   CardStore
 	Decks   DeckStore
 	Reviews ReviewStore
+	Tags    TagStore
 }

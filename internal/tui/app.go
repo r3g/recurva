@@ -27,6 +27,7 @@ type Services struct {
 	Decks   *service.DeckService
 	Cards   *service.CardService
 	Reviews *service.ReviewService
+	Tags    *service.TagService
 }
 
 type App struct {
