@@ -33,23 +33,32 @@ const (
 	ReviewStateLoading ReviewState = iota
 	ReviewStateFront
 	ReviewStateBack
+	ReviewStateTagging
 	ReviewStateDone
 )
 
-type Model struct {
-	reviewSvc  *service.ReviewService
-	deckName   string
-	session    *domain.ReviewSession
-	state      ReviewState
-	preview    *scheduler.Preview
-	priorStats ratingCounts
-	width      int
-	err        error
+type tagSavedMsg struct {
+	err error
 }
 
-func New(svc *service.ReviewService, deckName string) (Model, tea.Cmd) {
+type Model struct {
+	reviewSvc    *service.ReviewService
+	cardSvc      *service.CardService
+	deckName     string
+	session      *domain.ReviewSession
+	state        ReviewState
+	preview      *scheduler.Preview
+	priorStats   ratingCounts
+	width        int
+	err          error
+	pendingTags  map[string]bool // tags being toggled in tag mode
+	priorState   ReviewState     // state to return to on cancel
+}
+
+func New(reviewSvc *service.ReviewService, cardSvc *service.CardService, deckName string) (Model, tea.Cmd) {
 	m := Model{
-		reviewSvc: svc,
+		reviewSvc: reviewSvc,
+		cardSvc:   cardSvc,
 		deckName:  deckName,
 		state:     ReviewStateLoading,
 	}
@@ -108,6 +117,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.preview = msg
 		return m, nil
 
+	case tagSavedMsg:
+		if msg.err != nil {
+			m.err = msg.err
+			return m, nil
+		}
+		m.state = m.priorState
+		return m, nil
+
 	case tea.KeyMsg:
 		switch m.state {
 		case ReviewStateLoading, ReviewStateDone:
@@ -116,6 +133,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			switch {
 			case shared.Matches(msg, shared.DefaultKeyMap.Flip):
 				m.state = ReviewStateBack
+			case shared.Matches(msg, shared.DefaultKeyMap.Tag):
+				if card := m.session.CurrentCard(); card != nil {
+					m.pendingTags = make(map[string]bool)
+					for _, t := range card.Tags {
+						m.pendingTags[t] = true
+					}
+					m.priorState = ReviewStateFront
+					m.state = ReviewStateTagging
+				}
 			case shared.Matches(msg, shared.DefaultKeyMap.Back):
 				return m, switchToMenu()
 			case shared.Matches(msg, shared.DefaultKeyMap.Quit):
@@ -131,10 +157,34 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, m.rate(domain.RatingGood)
 			case shared.Matches(msg, shared.DefaultKeyMap.Easy):
 				return m, m.rate(domain.RatingEasy)
+			case shared.Matches(msg, shared.DefaultKeyMap.Tag):
+				if card := m.session.CurrentCard(); card != nil {
+					m.pendingTags = make(map[string]bool)
+					for _, t := range card.Tags {
+						m.pendingTags[t] = true
+					}
+					m.priorState = ReviewStateBack
+					m.state = ReviewStateTagging
+				}
 			case shared.Matches(msg, shared.DefaultKeyMap.Back):
 				m.state = ReviewStateFront
 			case shared.Matches(msg, shared.DefaultKeyMap.Quit):
 				return m, tea.Quit
+			}
+		case ReviewStateTagging:
+			switch {
+			case shared.Matches(msg, shared.DefaultKeyMap.Select): // enter
+				return m, m.saveTags()
+			case shared.Matches(msg, shared.DefaultKeyMap.Back): // esc
+				m.state = m.priorState
+			default:
+				for i, k := range tagKeys {
+					if msg.String() == k && i < len(shared.AvailableTags) {
+						tag := shared.AvailableTags[i]
+						m.pendingTags[tag] = !m.pendingTags[tag]
+						break
+					}
+				}
 			}
 		}
 	}
@@ -157,6 +207,42 @@ func (m Model) loadPreview() tea.Cmd {
 	return func() tea.Msg {
 		p, _ := m.reviewSvc.Preview(*card)
 		return &p
+	}
+}
+
+// tagKeys maps key presses to tag indices: 1-9 → 0-8, 0 → 9, - → 10, = → 11
+var tagKeys = []string{"1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "-", "="}
+
+func (m Model) saveTags() tea.Cmd {
+	card := m.session.CurrentCard()
+	if card == nil {
+		return nil
+	}
+	var tags []string
+	for _, t := range shared.AvailableTags {
+		if m.pendingTags[t] {
+			tags = append(tags, t)
+		}
+	}
+	// Also preserve any existing tags not in AvailableTags (e.g., POS tags)
+	availableSet := make(map[string]bool)
+	for _, t := range shared.AvailableTags {
+		availableSet[t] = true
+	}
+	for _, t := range card.Tags {
+		if !availableSet[t] && t != "" {
+			tags = append(tags, t)
+		}
+	}
+	cardCopy := *card
+	cardCopy.Tags = tags
+	return func() tea.Msg {
+		err := m.cardSvc.UpdateCardTags(context.Background(), &cardCopy)
+		if err == nil {
+			// Update the card in the session queue
+			*card = cardCopy
+		}
+		return tagSavedMsg{err: err}
 	}
 }
 
@@ -183,7 +269,7 @@ func (m Model) View() string {
 	case ReviewStateLoading:
 		return shared.StyleSubtle.Render("Loading session...")
 
-	case ReviewStateFront, ReviewStateBack:
+	case ReviewStateFront, ReviewStateBack, ReviewStateTagging:
 		card := m.session.CurrentCard()
 		if card == nil {
 			return ""
@@ -210,7 +296,7 @@ func (m Model) View() string {
 		centeredFront := lipgloss.NewStyle().Width(contentWidth).Align(lipgloss.Center).
 			Bold(true).Foreground(shared.ColorFront).Render(card.Front)
 		cardContent := centeredFront
-		if m.state == ReviewStateBack {
+		if m.state == ReviewStateBack || m.state == ReviewStateTagging {
 			divider := strings.Repeat("─", contentWidth)
 			cardContent += "\n\n" + shared.StyleSubtle.Render(divider) + "\n\n"
 			cardContent += shared.StyleBack.Render(card.Back)
@@ -220,10 +306,13 @@ func (m Model) View() string {
 		}
 		s += cardStyle.Render(cardContent) + "\n"
 
-		if m.state == ReviewStateFront {
-			s += shared.StyleHelp.Render("space to flip • esc back • q quit")
+		if m.state == ReviewStateTagging {
+			s += m.renderTagUI()
+		} else if m.state == ReviewStateFront {
+			s += shared.StyleHelp.Render("space to flip • t tag • esc back • q quit")
 		} else {
 			s += renderRatingBar(m.preview)
+			s += "\n" + shared.StyleHelp.Render("t tag")
 		}
 
 		s += "\n\n" + m.renderSessionStats()
@@ -233,6 +322,26 @@ func (m Model) View() string {
 		return shared.StyleSubtle.Render("Session complete!")
 	}
 	return ""
+}
+
+func (m Model) renderTagUI() string {
+	tagKeys := []string{"1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "-", "="}
+	s := "\n" + shared.StyleTitle.Render("Tag this card:") + "\n"
+	for i, tag := range shared.AvailableTags {
+		check := "[ ]"
+		if m.pendingTags[tag] {
+			check = "[x]"
+		}
+		key := tagKeys[i]
+		line := fmt.Sprintf("  %s %s) %s", check, key, tag)
+		if m.pendingTags[tag] {
+			s += shared.StyleGood.Render(line) + "\n"
+		} else {
+			s += shared.StyleSubtle.Render(line) + "\n"
+		}
+	}
+	s += "\n" + shared.StyleHelp.Render("enter to save • esc cancel")
+	return s
 }
 
 func renderRatingBar(preview *scheduler.Preview) string {

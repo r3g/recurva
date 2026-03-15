@@ -88,7 +88,7 @@ func reviewCmd() *cobra.Command {
 
 			if len(args) == 1 {
 				// Direct deck review
-				m, _ := review.New(svc.Reviews, args[0])
+				m, _ := review.New(svc.Reviews, svc.Cards, args[0])
 				p := tea.NewProgram(m, tea.WithAltScreen())
 				_, err := p.Run()
 				return err

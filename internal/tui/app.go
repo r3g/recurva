@@ -94,7 +94,7 @@ func (a *App) handleSwitch(msg shared.SwitchScreenMsg) (tea.Model, tea.Cmd) {
 		return a, a.decks.Init()
 	case ScreenReview:
 		a.screen = ScreenReview
-		m, cmd := review.New(a.services.Reviews, msg.DeckName)
+		m, cmd := review.New(a.services.Reviews, a.services.Cards, msg.DeckName)
 		a.review = m
 		return a, cmd
 	case ScreenResult:

@@ -34,6 +34,7 @@ type KeyMap struct {
 	Hard   key.Binding
 	Good   key.Binding
 	Easy   key.Binding
+	Tag    key.Binding
 }
 
 var DefaultKeyMap = KeyMap{
@@ -47,6 +48,23 @@ var DefaultKeyMap = KeyMap{
 	Hard:   key.NewBinding(key.WithKeys("2", "h"), key.WithHelp("2/h", "hard")),
 	Good:   key.NewBinding(key.WithKeys("3", "g"), key.WithHelp("3/g", "good")),
 	Easy:   key.NewBinding(key.WithKeys("4", "e"), key.WithHelp("4/e", "easy")),
+	Tag:    key.NewBinding(key.WithKeys("t"), key.WithHelp("t", "tag")),
+}
+
+// AvailableTags is the ordered list of tags users can apply to cards.
+var AvailableTags = []string{
+	"sat",
+	"gre",
+	"gmat",
+	"buckley",
+	"biz",
+	"favorite",
+	"latin",
+	"legal",
+	"colloquial",
+	"tech",
+	"medical",
+	"obscure",
 }
 
 // Matches is a convenience wrapper for key.Matches
