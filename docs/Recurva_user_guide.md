@@ -225,6 +225,11 @@ All keys at a glance:
 | Editor         | `Tab`         | Next field     |
 | Editor         | `Ctrl+S`      | Save card      |
 
+## TODO
+
+- [ ] Document `go install ./cmd/recurva` — after building from source, the `recurva` binary on your PATH is a snapshot; it won't reflect new code changes until you re-run `go install`. Use `go run ./cmd/recurva` during development to always run latest source.
+- [ ] Document the Card Browser screen (`b` from deck browser) — list, filter, detail, edit, add, delete flows.
+
 ## CLI Quick Reference
 
 These commands manage your data outside the TUI:

@@ -1,6 +1,7 @@
 package service
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/r3g/recurva/internal/domain"
@@ -41,7 +42,7 @@ func TestTagService_AddDuplicate(t *testing.T) {
 		t.Fatalf("AddTag: %v", err)
 	}
 	_, err := svc.AddTag(ctx(), "gre")
-	if err != domain.ErrAlreadyExists {
+	if !errors.Is(err, domain.ErrAlreadyExists) {
 		t.Fatalf("expected ErrAlreadyExists, got %v", err)
 	}
 }
@@ -50,7 +51,7 @@ func TestTagService_AddEmpty(t *testing.T) {
 	svc := NewTagService(*memory.New())
 
 	_, err := svc.AddTag(ctx(), "")
-	if err != domain.ErrInvalidInput {
+	if !errors.Is(err, domain.ErrInvalidInput) {
 		t.Fatalf("expected ErrInvalidInput, got %v", err)
 	}
 }
@@ -82,7 +83,7 @@ func TestTagService_RenameNotFound(t *testing.T) {
 	svc := NewTagService(*memory.New())
 
 	err := svc.RenameTag(ctx(), "nonexistent", "new")
-	if err != domain.ErrNotFound {
+	if !errors.Is(err, domain.ErrNotFound) {
 		t.Fatalf("expected ErrNotFound, got %v", err)
 	}
 }
@@ -106,8 +107,7 @@ func TestTagService_DeleteNotFound(t *testing.T) {
 	svc := NewTagService(*memory.New())
 
 	err := svc.DeleteTag(ctx(), "nonexistent")
-	if err != domain.ErrNotFound {
+	if !errors.Is(err, domain.ErrNotFound) {
 		t.Fatalf("expected ErrNotFound, got %v", err)
 	}
 }
-

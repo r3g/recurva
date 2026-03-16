@@ -42,17 +42,17 @@ type tagSavedMsg struct {
 }
 
 type Model struct {
-	reviewSvc    *service.ReviewService
-	cardSvc      *service.CardService
-	deckName     string
-	session      *domain.ReviewSession
-	state        ReviewState
-	preview      *scheduler.Preview
-	priorStats   ratingCounts
-	width        int
-	err          error
-	pendingTags  map[string]bool // tags being toggled in tag mode
-	priorState   ReviewState     // state to return to on cancel
+	reviewSvc   *service.ReviewService
+	cardSvc     *service.CardService
+	deckName    string
+	session     *domain.ReviewSession
+	state       ReviewState
+	preview     *scheduler.Preview
+	priorStats  ratingCounts
+	width       int
+	err         error
+	pendingTags map[string]bool // tags being toggled in tag mode
+	priorState  ReviewState     // state to return to on cancel
 }
 
 func New(reviewSvc *service.ReviewService, cardSvc *service.CardService, deckName string) (Model, tea.Cmd) {

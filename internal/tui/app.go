@@ -4,6 +4,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/r3g/recurva/internal/service"
+	"github.com/r3g/recurva/internal/tui/cards"
 	"github.com/r3g/recurva/internal/tui/decks"
 	"github.com/r3g/recurva/internal/tui/menu"
 	"github.com/r3g/recurva/internal/tui/review"
@@ -14,10 +15,11 @@ import (
 type Screen = shared.Screen
 
 const (
-	ScreenMenu   = shared.ScreenMenu
-	ScreenDecks  = shared.ScreenDecks
-	ScreenReview = shared.ScreenReview
-	ScreenResult = shared.ScreenResult
+	ScreenMenu        = shared.ScreenMenu
+	ScreenDecks       = shared.ScreenDecks
+	ScreenReview      = shared.ScreenReview
+	ScreenResult      = shared.ScreenResult
+	ScreenCardBrowser = shared.ScreenCardBrowser
 )
 
 // SwitchScreenMsg re-exported from shared
@@ -31,14 +33,15 @@ type Services struct {
 }
 
 type App struct {
-	services Services
-	screen   Screen
-	width    int
-	height   int
-	menu     menu.Model
-	decks    decks.Model
-	review   review.Model
-	result   review.ResultModel
+	services    Services
+	screen      Screen
+	width       int
+	height      int
+	menu        menu.Model
+	decks       decks.Model
+	review      review.Model
+	result      review.ResultModel
+	cardBrowser cards.BrowserModel
 }
 
 func NewApp(svc Services) *App {
@@ -84,6 +87,10 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m, cmd := a.result.Update(msg)
 		a.result = m.(review.ResultModel)
 		return a, cmd
+	case ScreenCardBrowser:
+		m, cmd := a.cardBrowser.Update(msg)
+		a.cardBrowser = m.(cards.BrowserModel)
+		return a, cmd
 	}
 	return a, nil
 }
@@ -105,6 +112,11 @@ func (a *App) handleSwitch(msg shared.SwitchScreenMsg) (tea.Model, tea.Cmd) {
 	case ScreenMenu:
 		a.screen = ScreenMenu
 		return a, nil
+	case ScreenCardBrowser:
+		a.screen = ScreenCardBrowser
+		m, cmd := cards.NewBrowser(a.services.Cards, msg.DeckName, a.width, a.height)
+		a.cardBrowser = m
+		return a, cmd
 	}
 	return a, nil
 }
@@ -120,9 +132,19 @@ func (a *App) View() string {
 		content = a.review.View()
 	case ScreenResult:
 		content = a.result.View()
+	case ScreenCardBrowser:
+		content = a.cardBrowser.View()
 	}
 	if a.width == 0 || a.height == 0 {
 		return content
+	}
+	if a.screen == ScreenCardBrowser {
+		// Card browser uses full width, left-aligned with padding
+		return lipgloss.NewStyle().
+			Padding(1, 2).
+			Width(a.width).
+			Height(a.height).
+			Render(content)
 	}
 	return lipgloss.Place(a.width, a.height, lipgloss.Center, lipgloss.Center, content)
 }

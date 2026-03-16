@@ -46,6 +46,20 @@ func (s *CardService) ListCards(ctx context.Context, deckName string) ([]*domain
 	return s.store.Cards.ListCards(ctx, deck.ID, false, timeNow())
 }
 
+func (s *CardService) GetCard(ctx context.Context, id string) (*domain.Card, error) {
+	return s.store.Cards.GetCard(ctx, id)
+}
+
+func (s *CardService) UpdateCard(ctx context.Context, card *domain.Card) error {
+	card.Front = strings.TrimSpace(card.Front)
+	card.Back = strings.TrimSpace(card.Back)
+	card.Notes = strings.TrimSpace(card.Notes)
+	if card.Front == "" || card.Back == "" {
+		return domain.ErrInvalidInput
+	}
+	return s.store.Cards.UpdateCard(ctx, card)
+}
+
 func (s *CardService) UpdateCardTags(ctx context.Context, card *domain.Card) error {
 	return s.store.Cards.UpdateCard(ctx, card)
 }

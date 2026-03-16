@@ -60,6 +60,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					return shared.SwitchScreenMsg{Screen: shared.ScreenReview, DeckName: deckName}
 				}
 			}
+		case shared.Matches(msg, shared.DefaultKeyMap.Browse):
+			if len(m.stats) > 0 {
+				deckName := m.stats[m.cursor].DeckName
+				return m, func() tea.Msg {
+					return shared.SwitchScreenMsg{Screen: shared.ScreenCardBrowser, DeckName: deckName}
+				}
+			}
 		case shared.Matches(msg, shared.DefaultKeyMap.Back):
 			return m, func() tea.Msg {
 				return shared.SwitchScreenMsg{Screen: shared.ScreenMenu}
@@ -98,6 +105,6 @@ func (m Model) View() string {
 		s += line + "\n"
 	}
 
-	s += "\n" + shared.StyleHelp.Render("↑/↓ navigate • enter review • esc back • q quit")
+	s += "\n" + shared.StyleHelp.Render("↑/↓ navigate • enter review • b browse • esc back • q quit")
 	return s
 }

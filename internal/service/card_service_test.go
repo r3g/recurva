@@ -94,6 +94,79 @@ func TestCardService_DeleteCard(t *testing.T) {
 	}
 }
 
+func TestCardService_GetCard(t *testing.T) {
+	cardSvc, _ := setupCardTest(t)
+
+	card, err := cardSvc.AddCard(ctx(), "Go", "Q", "A", "note", nil)
+	if err != nil {
+		t.Fatalf("setup: %v", err)
+	}
+
+	got, err := cardSvc.GetCard(ctx(), card.ID)
+	if err != nil {
+		t.Fatalf("GetCard: %v", err)
+	}
+	if got.Front != "Q" {
+		t.Errorf("Front = %q, want %q", got.Front, "Q")
+	}
+}
+
+func TestCardService_GetCard_NotFound(t *testing.T) {
+	cardSvc, _ := setupCardTest(t)
+
+	_, err := cardSvc.GetCard(ctx(), "nonexistent-id")
+	if err == nil {
+		t.Fatal("expected error for nonexistent card")
+	}
+}
+
+func TestCardService_UpdateCard(t *testing.T) {
+	cardSvc, _ := setupCardTest(t)
+
+	card, err := cardSvc.AddCard(ctx(), "Go", "Q", "A", "", nil)
+	if err != nil {
+		t.Fatalf("setup: %v", err)
+	}
+
+	card.Front = "  Updated Q  "
+	card.Back = " Updated A "
+	card.Notes = " some notes "
+	if err := cardSvc.UpdateCard(ctx(), card); err != nil {
+		t.Fatalf("UpdateCard: %v", err)
+	}
+
+	got, _ := cardSvc.GetCard(ctx(), card.ID)
+	if got.Front != "Updated Q" {
+		t.Errorf("Front = %q, want trimmed", got.Front)
+	}
+	if got.Back != "Updated A" {
+		t.Errorf("Back = %q, want trimmed", got.Back)
+	}
+	if got.Notes != "some notes" {
+		t.Errorf("Notes = %q, want trimmed", got.Notes)
+	}
+}
+
+func TestCardService_UpdateCard_EmptyFields(t *testing.T) {
+	cardSvc, _ := setupCardTest(t)
+
+	card, err := cardSvc.AddCard(ctx(), "Go", "Q", "A", "", nil)
+	if err != nil {
+		t.Fatalf("setup: %v", err)
+	}
+
+	card.Front = "  "
+	if err := cardSvc.UpdateCard(ctx(), card); !errors.Is(err, domain.ErrInvalidInput) {
+		t.Fatalf("empty front = %v, want ErrInvalidInput", err)
+	}
+
+	card.Front = "Q"
+	card.Back = ""
+	if err := cardSvc.UpdateCard(ctx(), card); !errors.Is(err, domain.ErrInvalidInput) {
+		t.Fatalf("empty back = %v, want ErrInvalidInput", err)
+	}
+}
+
 func TestCardService_ImportCSV(t *testing.T) {
 	cardSvc, _ := setupCardTest(t)
 
