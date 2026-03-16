@@ -303,6 +303,18 @@ func (m Model) View() string {
 			if card.Notes != "" {
 				cardContent += "\n\n" + shared.StyleSubtle.Render("Notes: "+card.Notes)
 			}
+			var domainTags []string
+			for _, t := range card.Tags {
+				for _, at := range shared.AvailableTags {
+					if t == at {
+						domainTags = append(domainTags, t)
+						break
+					}
+				}
+			}
+			if len(domainTags) > 0 {
+				cardContent += "\n\n" + shared.StyleSubtle.Render(strings.Join(domainTags, " · "))
+			}
 		}
 		s += cardStyle.Render(cardContent) + "\n"
 
