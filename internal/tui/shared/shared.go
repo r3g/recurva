@@ -56,18 +56,32 @@ var DefaultKeyMap = KeyMap{
 
 // AvailableTags is the ordered list of tags users can apply to cards.
 var AvailableTags = []string{
-	"sat",
-	"gre",
-	"gmat",
+	"archaic",
+	"astronomy",
 	"buckley",
-	"biz",
+	"business",
+	"cognitive-science",
+	"colloquial",
+	"computer-science",
+	"culinary",
+	"economics",
+	"engineering",
 	"favorite",
+	"finance",
+	"gmat",
+	"gre",
 	"latin",
 	"legal",
-	"colloquial",
-	"tech",
+	"linguistics",
+	"mathematics",
 	"medical",
+	"military",
+	"mythology",
 	"obscure",
+	"philosophy",
+	"sat",
+	"scientific",
+	"tech",
 }
 
 // Matches is a convenience wrapper for key.Matches

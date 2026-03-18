@@ -80,7 +80,7 @@ func (s *FSRSScheduler) Preview(card domain.Card, now time.Time) (scheduler.Prev
 		info := recordLog[gofsrs.Rating(r)]
 		previews = append(previews, scheduler.RatingPreview{
 			Rating:   r,
-			Interval: info.Card.ScheduledDays,
+			Interval: info.Card.Due.Sub(now),
 		})
 	}
 

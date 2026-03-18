@@ -13,7 +13,7 @@ type ScheduleResult struct {
 
 type RatingPreview struct {
 	Rating   domain.Rating
-	Interval uint64 // days until next review
+	Interval time.Duration // time until next review
 }
 
 type Preview struct {

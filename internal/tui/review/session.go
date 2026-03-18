@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -53,6 +54,7 @@ type Model struct {
 	err         error
 	pendingTags map[string]bool // tags being toggled in tag mode
 	priorState  ReviewState     // state to return to on cancel
+	tagCursor   int             // cursor position in tag list
 }
 
 func New(reviewSvc *service.ReviewService, cardSvc *service.CardService, deckName string) (Model, tea.Cmd) {
@@ -141,6 +143,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					}
 					m.priorState = ReviewStateFront
 					m.state = ReviewStateTagging
+					m.tagCursor = 0
 				}
 			case shared.Matches(msg, shared.DefaultKeyMap.Back):
 				return m, switchToMenu()
@@ -165,6 +168,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					}
 					m.priorState = ReviewStateBack
 					m.state = ReviewStateTagging
+					m.tagCursor = 0
 				}
 			case shared.Matches(msg, shared.DefaultKeyMap.Back):
 				m.state = ReviewStateFront
@@ -177,14 +181,17 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, m.saveTags()
 			case shared.Matches(msg, shared.DefaultKeyMap.Back): // esc
 				m.state = m.priorState
-			default:
-				for i, k := range tagKeys {
-					if msg.String() == k && i < len(shared.AvailableTags) {
-						tag := shared.AvailableTags[i]
-						m.pendingTags[tag] = !m.pendingTags[tag]
-						break
-					}
+			case shared.Matches(msg, shared.DefaultKeyMap.Up):
+				if m.tagCursor > 0 {
+					m.tagCursor--
 				}
+			case shared.Matches(msg, shared.DefaultKeyMap.Down):
+				if m.tagCursor < len(shared.AvailableTags)-1 {
+					m.tagCursor++
+				}
+			case shared.Matches(msg, shared.DefaultKeyMap.Flip): // space to toggle
+				tag := shared.AvailableTags[m.tagCursor]
+				m.pendingTags[tag] = !m.pendingTags[tag]
 			}
 		}
 	}
@@ -209,9 +216,6 @@ func (m Model) loadPreview() tea.Cmd {
 		return &p
 	}
 }
-
-// tagKeys maps key presses to tag indices: 1-9 → 0-8, 0 → 9, - → 10, = → 11
-var tagKeys = []string{"1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "-", "="}
 
 func (m Model) saveTags() tea.Cmd {
 	card := m.session.CurrentCard()
@@ -337,23 +341,40 @@ func (m Model) View() string {
 }
 
 func (m Model) renderTagUI() string {
-	tagKeys := []string{"1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "-", "="}
 	s := "\n" + shared.StyleTitle.Render("Tag this card:") + "\n"
-	for i, tag := range shared.AvailableTags {
-		check := "[ ]"
-		if m.pendingTags[tag] {
-			check = "[x]"
+	tags := shared.AvailableTags
+	half := (len(tags) + 1) / 2 // left column gets the extra item if odd
+	colWidth := 28              // fixed column width for alignment
+	for row := 0; row < half; row++ {
+		left := m.renderTagEntry(row, tags[row], colWidth)
+		right := ""
+		ri := row + half
+		if ri < len(tags) {
+			right = m.renderTagEntry(ri, tags[ri], colWidth)
 		}
-		key := tagKeys[i]
-		line := fmt.Sprintf("  %s %s) %s", check, key, tag)
-		if m.pendingTags[tag] {
-			s += shared.StyleGood.Render(line) + "\n"
-		} else {
-			s += shared.StyleSubtle.Render(line) + "\n"
-		}
+		s += left + right + "\n"
 	}
-	s += "\n" + shared.StyleHelp.Render("enter to save • esc cancel")
+	s += "\n" + shared.StyleHelp.Render("↑/↓ navigate • space toggle • enter save • esc cancel")
 	return s
+}
+
+func (m Model) renderTagEntry(idx int, tag string, width int) string {
+	check := "[ ]"
+	if m.pendingTags[tag] {
+		check = "[x]"
+	}
+	label := fmt.Sprintf("%s %s", check, tag)
+	// Pad to fixed width
+	for len(label) < width-4 {
+		label += " "
+	}
+	if idx == m.tagCursor {
+		return shared.StyleSelected.Render("▸ " + label)
+	}
+	if m.pendingTags[tag] {
+		return shared.StyleGood.Render("  " + label)
+	}
+	return shared.StyleSubtle.Render("  " + label)
 }
 
 func renderRatingBar(preview *scheduler.Preview) string {
@@ -423,10 +444,14 @@ func (m Model) renderSessionStats() string {
 	return stats
 }
 
-func formatInterval(days uint64) string {
-	if days == 0 {
-		return "<1d"
+func formatInterval(d time.Duration) string {
+	if d < time.Hour {
+		return fmt.Sprintf("%dm", int(d.Minutes()))
 	}
+	if d < 24*time.Hour {
+		return fmt.Sprintf("%dh", int(d.Hours()))
+	}
+	days := int(d.Hours() / 24)
 	if days < 30 {
 		return fmt.Sprintf("%dd", days)
 	}
